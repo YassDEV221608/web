@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Water Tank Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .title {
+            font-weight: 300;
+            padding: 0.5rem;
+        }
+    </style>
+</head>
+<body class="bg-light">
+<div class="container">
+    <!-- Title -->
+    <div class="row">
+        <div class="col text-center">
+            <h1 class="display-4">Water Tank Dashboard</h1>
+        </div>
+    </div>
+
+    <!--Separator-->
+    <div class="row">
+        <hr>
+    </div>
+
+    <!-- rows -->
+    <div class="row text-center justify-content-center p-1">
+        <h2 class="title">Level and flow</h2>
+        <div class="col text-center border bg-white rounded p-0 m-1">
+            <h3 class="title bg-secondary text-white w-100 rounded-top">Real time value</h3>
+
+            <table class="table table-hover table-borderless">
+                <tbody>
+                <tr class="border-bottom">
+                    <th scope="row">Level(L):</th>
+                    <td id="level-value">###</td>
+                </tr>
+                <tr>
+                    <th scope="row">Flow(m<sup>3</sup>/s):</th>
+                    <td id="flow-value">###</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+        <div class="col text-center bg-white border rounded p-0 m-1">
+            <h3 class="title bg-secondary text-white w-100 rounded-top">Set value manually</h3>
+            <table class="table table-borderless">
+                <tbody>
+                <tr class="border-bottom">
+                    <th scope="row">Level(L):</th>
+                    <td>
+                        <div class="input-group">
+                            <input type="number" id="button-addon1-in" class="form-control" placeholder="..." aria-label="..." aria-describedby="button-addon1">
+                            <button class="btn btn-outline-secondary" type="button" id="button-addon1">Set value
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                <tr>
+                    <th scope="row">Flow(m<sup>3</sup>/s):</th>
+                    <td>
+                        <div class="input-group">
+                            <input type="number" id="button-addon2-in" class="form-control" placeholder="..." aria-label="..." aria-describedby="button-addon2">
+                            <button class="btn btn-outline-secondary" type="button" id="button-addon2">Set value
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!--Separator-->
+    <div class="row mt-3 mb-3">
+        <hr>
+    </div>
+
+    <div class="row justify-content-center">
+        <div class="col text-center bg-white border rounded justify-content-center p-0 m-1">
+            <h3 class="title bg-secondary text-white w-100 rounded-top">Gauge</h3>
+            <div id='water-level-gauge'></div>
+        </div>
+        <div class="col text-center bg-white border rounded p-0 m-1">
+            <h3 class="title bg-secondary text-white w-100 rounded-top">Line chart</h3>
+            <div id="water-level-plot" style="width:100%;max-width:700px"></div>
+        </div>
+    </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.2/dist/js/bootstrap.min.js"></script>
+<script src="https://cdn.plot.ly/plotly-latest.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"
+        integrity="sha512-pumBsjNRGGqkPzKHndZMaAG+bir374sORyzM3uulLV14lN5LyykqNk8eEeUlUkB3U0M4FApyaHraT65ihJhDpQ=="
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer">
+</script>
+
+<!--Global variables-->
+<script>
+    var waterLevelData = {
+        x: [],
+        y: []
+    };
+    var waterFlowData = {
+        x: [],
+        y: []
+    };
+
+    var gData = {
+        xDomain: [0, 1],
+        yDomain: [0, 1],
+        value: 250
+    };
+
+    function fetchData() {
+        fetch('http://localhost/web2/getData.php')
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("Fetched data:", data); // Logging fetched data
+            
+            const currentTime = new Date().toISOString().split('T')[1]; // Get only the time part
+            
+            waterLevelData.x.push(currentTime);
+            waterLevelData.y.push(data.level);
+
+            waterFlowData.x.push(currentTime);
+            waterFlowData.y.push(data.flow);
+
+            gData.value = data.level;
+
+            // Update the dashboard display
+            displayLevelAndFlow();
+            updateChartsValues();
+        })
+        .catch(error => {
+            console.error('Fetch Error:', error);
+        });
+    }
+
+    function setValues(level) {
+        fetch('http://localhost/web2/setData.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ level: level})
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'success') {
+                console.log('Data set successfully');
+            } else {
+                console.error('Set Data Error:', data.message);
+            }
+        })
+        .catch(error => {
+            console.error('Set Data Error:', error);
+        });
+    }
+
+    document.getElementById("button-addon1").addEventListener("click", function() {
+        const level = document.getElementById("button-addon1-in").value;
+        setValues(level);
+    });
+
+    function displayLevelAndFlow() {
+        document.getElementById("level-value").innerHTML = waterLevelData.y[waterLevelData.y.length - 1];
+        document.getElementById("flow-value").innerHTML = waterFlowData.y[waterFlowData.y.length - 1];
+    }
+
+    function drawLineChart() {
+    console.log("Drawing line chart with:", waterLevelData, waterFlowData); // Logging data to be plotted
+
+    const plotData = [
+        {
+            x: waterLevelData.x,
+            y: waterLevelData.y,
+            name: "Water level",
+            mode: "lines"
+        },
+        {
+            x: waterFlowData.x,
+            y: waterFlowData.y,
+            name: "Water flow",
+            mode: "lines"
+        }
+    ];
+
+    const plotLayout = {
+        xaxis: {title: "Time"},
+        yaxis: {range: [0, 1], title: ""},
+        title: "Water Level and Flow",
+        responsive: true
+    };
+
+    Plotly.newPlot("water-level-plot", plotData, plotLayout);
+}
+
+
+    function drawGauge(){
+        var gaugeData = [
+            {
+                domain: {x: gData.xDomain, y: gData.yDomain},
+                value: gData.value,
+                title: {text: "Gauge"},
+                type: "indicator",
+                mode: "gauge+number",
+                gauge: {
+                    bar: {color: "darkblue"},
+                }
+            }
+        ];
+
+        var gaugeLayout = {responsive: true};
+        Plotly.newPlot('water-level-gauge', gaugeData, gaugeLayout);
+    }
+
+    function updateChartsValues() {
+        drawLineChart();
+        drawGauge();
+    }
+
+    fetchData();  // Fetch initial data when the page loads
+
+    // Fetch new data every 5 seconds
+    setInterval(fetchData, 5000);
+
+</script>
+
+
+</body>
+</html>
