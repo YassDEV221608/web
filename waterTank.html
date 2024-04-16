@@ -29,7 +29,7 @@
     <div class="row text-center justify-content-center p-1">
         <h2 class="title">Level and flow</h2>
         <div class="col text-center border bg-white rounded p-0 m-1">
-            <h3 class="title bg-secondary text-white w-100 rounded-top">Real time value</h3>
+            <h3 class="title bg-primary text-white w-100 rounded-top">Level & Flow</h3>
 
             <table class="table table-hover table-borderless">
                 <tbody>
@@ -45,7 +45,7 @@
             </table>
         </div>
         <div class="col text-center bg-white border rounded p-0 m-1">
-            <h3 class="title bg-secondary text-white w-100 rounded-top">Set value manually</h3>
+            <h3 class="title bg-primary text-white w-100 rounded-top">Set Level</h3>
             <table class="table table-borderless">
                 <tbody>
                 <tr class="border-bottom">
@@ -53,21 +53,12 @@
                     <td>
                         <div class="input-group">
                             <input type="number" id="button-addon1-in" class="form-control" placeholder="..." aria-label="..." aria-describedby="button-addon1">
-                            <button class="btn btn-outline-secondary" type="button" id="button-addon1">Set value
+                            <button class="btn btn-outline-primary" type="button" id="button-addon1">Set value
                             </button>
                         </div>
                     </td>
                 </tr>
-                <tr>
-                    <th scope="row">Flow(m<sup>3</sup>/s):</th>
-                    <td>
-                        <div class="input-group">
-                            <input type="number" id="button-addon2-in" class="form-control" placeholder="..." aria-label="..." aria-describedby="button-addon2">
-                            <button class="btn btn-outline-secondary" type="button" id="button-addon2">Set value
-                            </button>
-                        </div>
-                    </td>
-                </tr>
+                
                 </tbody>
             </table>
         </div>
@@ -80,11 +71,11 @@
 
     <div class="row justify-content-center">
         <div class="col text-center bg-white border rounded justify-content-center p-0 m-1">
-            <h3 class="title bg-secondary text-white w-100 rounded-top">Gauge</h3>
+            <h3 class="title bg-primary text-white w-100 rounded-top">Level Gauge</h3>
             <div id='water-level-gauge'></div>
         </div>
         <div class="col text-center bg-white border rounded p-0 m-1">
-            <h3 class="title bg-secondary text-white w-100 rounded-top">Line chart</h3>
+            <h3 class="title bg-primary text-white w-100 rounded-top">Level & Flow Track</h3>
             <div id="water-level-plot" style="width:100%;max-width:700px"></div>
         </div>
     </div>
@@ -126,8 +117,7 @@
             return response.json();
         })
         .then(data => {
-            console.log("Fetched data:", data); // Logging fetched data
-            
+           
             const currentTime = new Date().toISOString().split('T')[1]; // Get only the time part
             
             waterLevelData.x.push(currentTime);
@@ -147,31 +137,35 @@
         });
     }
 
-    function setValues(level) {
-        fetch('http://localhost/web2/setData.php', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({ level: level})
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (data.status === 'success') {
-                console.log('Data set successfully');
-            } else {
-                console.error('Set Data Error:', data.message);
-            }
-        })
-        .catch(error => {
-            console.error('Set Data Error:', error);
-        });
-    }
-
-    document.getElementById("button-addon1").addEventListener("click", function() {
-        const level = document.getElementById("button-addon1-in").value;
-        setValues(level);
+    function insertRemoteControl(level) {
+    fetch(`http://localhost/web2/insertRemoteControl.php?level=${level}`, {
+        method: 'GET',
+        headers: {
+            'Content-Type': 'application/json'
+        }
+    })
+    .then(response => {
+        if (!response.ok) {
+            throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+        return response.json();  // Parse the JSON response
+    })
+    .then(data => {
+        console.log(data);
+    })
+    .catch(error => {
+        console.error('Insert Error:', error);
     });
+}
+
+
+
+    
+
+document.getElementById("button-addon1").addEventListener("click", function() {
+    const level = document.getElementById("button-addon1-in").value;
+    insertRemoteControl(level);
+});
 
     function displayLevelAndFlow() {
         document.getElementById("level-value").innerHTML = waterLevelData.y[waterLevelData.y.length - 1];
@@ -179,7 +173,7 @@
     }
 
     function drawLineChart() {
-    console.log("Drawing line chart with:", waterLevelData, waterFlowData); // Logging data to be plotted
+   
 
     const plotData = [
         {
@@ -198,7 +192,7 @@
 
     const plotLayout = {
         xaxis: {title: "Time"},
-        yaxis: {range: [0, 1], title: ""},
+       
         title: "Water Level and Flow",
         responsive: true
     };
